@@ -5,6 +5,8 @@ from Bio import Phylo
 #from numpy import zeros
 import math
 import multiprocessing as mp
+import re
+import time
 
 class PhyloKernel:
     def __init__(self, 
@@ -19,6 +21,8 @@ class PhyloKernel:
                 decayFactor=0.1, 
                 verbose=False, 
                 resolve_poly=False,
+                labelFactor=1,
+                labelFilter=None,
                 **kwargs):
         """
         requires a list of Phylo.Tree objects
@@ -43,6 +47,12 @@ class PhyloKernel:
         self.decayFactor = decayFactor
         self.verbose = verbose
         self.resolve_poly = resolve_poly
+        
+        # labelling
+        self.labelFactor = labelFactor
+        self.labelFilter = labelFilter
+        if labelFilter is not None:
+	        self.labelRegex = re.compile(self.labelFilter)
         
         self.pcache = {}
         self.subtrees = {} # used for matching polytomies
@@ -135,6 +145,9 @@ class PhyloKernel:
         """
         for tip in t.get_terminals():
             tip.production = 0
+            
+            if self.labelFilter != None:
+            	tip.label = self.labelRegex.findall(tip.name)[0]
 
         for i, node in enumerate(t.get_nonterminals(order='postorder')):
             children = node.clades
@@ -144,6 +157,7 @@ class PhyloKernel:
             branch_lengths = [c.branch_length for c in node.clades]
             node.bl = branch_lengths
             node.sqbl = sum([bl**2 for bl in branch_lengths])
+            	
 
     def compute_matrix(self):
         for i in range(self.ntrees):
@@ -155,7 +169,10 @@ class PhyloKernel:
         
         self.is_kmat_computed = True
 
-    def kernel(self, t1, t2, myrank=None, nprocs=None, output=None):
+#	def parse_label(self, clade):
+		
+
+    def kernel(self, t1, t2, myrank=None, nprocs=None, dp_matrix={}):
         """
         Recursive function for computing tree convolution
         kernel.  Adapted from Moschitti (2006) Making tree kernels
@@ -166,48 +183,97 @@ class PhyloKernel:
         nodes1 = t1.get_nonterminals(order='postorder')
         nodes2 = t2.get_nonterminals(order='postorder')
         k = 0
+        
         if not hasattr(nodes1[0], 'production'):
             self.annotate_tree(t1)
         if not hasattr(nodes2[0], 'production'):
             self.annotate_tree(t2)
 
-        dp_matrix = {}
-
         # iterate over non-terminals, visiting children before parents
         for ni, n1 in enumerate(nodes1):
-            if myrank is not None and nprocs and ni % nprocs != myrank:
+            if myrank is not None and nprocs is not None and ni % nprocs != myrank:
                 continue
+                        
+            # if multithreading wait for children to be processed first
+            if myrank is not None:
+#                print("in: " + str(n1.index))
+                
+                for c in n1.clades:
+	            	if hasattr(c, 'index'):
+	    	        	while c.index not in dp_matrix:
+#	    	        		print(str(n1.index) + " wait on: " + str(c.index))
+	    	        	    
+    		        		time.sleep(0.0001)
 
             for n2 in nodes2:
-
                 if n1.production == n2.production:
-                    res = self.decayFactor * math.exp( -1. / self.gaussFactor
-                        * (n1.sqbl + n2.sqbl - 2*sum([(n1.bl[i]*n2.bl[i]) for i in range(len(n1.bl))])))
-
-                    for cn1 in range(2):
-                        c1 = n1.clades[cn1]
-                        c2 = n2.clades[cn1]
+                    if self.labelFilter is not None:                    
+                        res1 = math.exp( -1. / self.gaussFactor * (n1.sqbl + n2.sqbl - 2*sum([(n1.bl[i]*n2.bl[i]) for i in range(len(n1.bl))]))) 
+                        res2 = math.exp( -1. / self.gaussFactor * (n1.sqbl + n2.sqbl - 2*sum([(n1.bl[i]*n2.bl[(i+1)%2]) for i in range(len(n1.bl))])))
                         
-                        if c1.production != c2.production:
-                            continue
+                        for cn1 in range(2):
+                            c1 = n1.clades[cn1]
+                            c21 = n2.clades[cn1]
+                            c22 = n2.clades[(cn1 + 1) % 2]
                         
-                        if c1.production == 0:
-                            # branches are terminal
-                            res *= self.sigma + self.decayFactor
-                        else:
-                            try:
-                                res *= self.sigma + dp_matrix[(c1.index, c2.index)]
-                            except KeyError:
+                            if c1.production != c21.production:
+                                res1 *= self.sigma
+                            elif c1.production == 0:
+                                # branches are terminal
+                                labelWeight = 1 if c1.label == c21.label else self.labelFactor
+                            	
+                                res1 *= self.sigma + self.decayFactor * labelWeight
+                            else:
+                                try:
+                                    res1 *= self.sigma + dp_matrix[(c1.index, c21.index)]
+                                except KeyError:
+                                    res1 *= self.sigma
+                                
+                            if c1.production != c22.production:
+                                res2 *= self.sigma
+                            elif c1.production == 0:
+                                # branches are terminal
+                                labelWeight = 1 if c1.label == c22.label else self.labelFactor
+                            	
+                                res2 *= self.sigma + self.decayFactor * labelWeight
+                            else:
+                                try:
+                                    res2 *= self.sigma + dp_matrix[(c1.index, c22.index)]
+                                except KeyError:
+                                    res2 *= self.sigma
+                                                        
+                        res = self.decayFactor * max(res1, res2)
+                    else:
+                        res = self.decayFactor * math.exp( -1. / self.gaussFactor * (n1.sqbl + n2.sqbl - 2*sum([(n1.bl[i]*n2.bl[i]) for i in range(len(n1.bl))]))) 
+                    
+                    	for cn1 in range(2):
+                            c1 = n1.clades[cn1]
+                            c2 = n2.clades[cn1]
+                        
+                            if c1.production != c2.production:
                                 res *= self.sigma
+                            elif c1.production == 0:
+                                # branches are terminal
+                                res *= self.sigma + self.decayFactor
+                            else:
+                                try:
+                                    res *= self.sigma + dp_matrix[(c1.index, c2.index)]
+                                except KeyError:
+                                    res *= self.sigma
             
                     dp_matrix[(n1.index, n2.index)] = res
                     k += res
+                
+            if myrank is not None:    
+                dp_matrix[n1.index] = 0
+            
+#            if myrank is not None:
+#                print("out: " + str(n1.index))
 
-        if output is None:
-            return k
+#        if output is None:
+        return k
         
-        output.put(k)
-
+            
     def kernel_parallel(self, t1, t2, nthreads):
         """
         Wrapper around kernel().
@@ -220,9 +286,10 @@ class PhyloKernel:
         :param nthreads: number of threads in pool
         :return: kernel score (double)
         """
-        # FIXME: this gives the wrong answer
-        output = mp.Queue()
-        processes = [mp.Process(target=self.kernel, args=(t1, t2, i, nthreads, output))
+                
+        manager = mp.Manager()
+        dp_matrix = manager.dict()
+        processes = [mp.Process(target=self.kernel, args=(t1, t2, i, nthreads, dp_matrix))
                      for i in range(nthreads)]
         for p in processes:
             p.start()
@@ -232,5 +299,5 @@ class PhyloKernel:
             p.join()
 
         # collect results and calculate sum
-        k = sum([output.get() for p in processes])
+        k = sum(dp_matrix.values())
         return k

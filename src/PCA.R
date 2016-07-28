@@ -1,31 +1,20 @@
-#!/usr/bin/Rscript -f
-#PLoS Comput Biol. 2009 Oct;5(10):e1000533. doi: 10.1371/journal.pcbi.1000533. Epub 2009 Oct 16.
-
 library(rcolgem)
-#library(phydynR)
+library(ade4)
 
-args <- commandArgs(trailing=T)
+folder <- "../data/pca.extreme/"
 
-#params.file = NA
-
-params.file <- if (length(args > 0)) {
-	args[1]
-} else {
-	NA
-}
-
-#show.demographic.process <- function(demo.model, theta, x0, t0, t1, res = 1000, integrationMethod = "lsoda", ...) {
-show.demographic.process <- function(tfgy, ...) {
-#    tfgy <- demo.model(theta, x0, t0, t1, res = 1000, integrationMethod = integrationMethod)
-    o <- tfgy[[5]]
-    t <- o[, 1]
-    matplot(t, log10(o[, 2:ncol(o)]), type = "l", xlab = "Time", ylab = "", ...)
-    legend("bottomright", inset = 0.05, legend = colnames(o)[2:ncol(o)], pch = 1, horiz = TRUE, ...)
-    tfgy
+get.steady.state <- function(params) {
+	V.0 <- with(params, N * lambda / c * (1 - d.0 / (d.0 + a.L) * eta) - d.T / k)
+	T.0 <- with(params, lambda / (d.T + k * V.0))
+	L.0 <- with(params, eta * k * V.0 * T.0 / (d.0 + a.L))
+	Ts.0 <- with(params, c * V.0 / (N * delta))
+	
+	c(V=V.0, T=T.0, L=L.0, Ts=Ts.0)
 }
 
 simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes, sampleTimes, 
-    sampleStates, integrationMethod = "rk4", n.reps = 1, cluster = NULL) {
+    sampleStates, integrationMethod = "rk4", n.reps = 1, cluster = NULL) 
+{
     s <- round(coef(lm(x ~ y, data.frame(x = 1:length(times), 
         y = sort(times))))[1], digits = 9)
     if (s != 1) 
@@ -109,8 +98,6 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
         return(list(unname(Q1), unname(A1), unname(L1)))
     }
     run1 <- function(repl) {
-    	cat(paste0(repl, ", "))
-    
         cumSortedSampleStates <- sapply(1:m, function(k) cumsum(sortedSampleStates[, 
             k]))
         cumSortedNotSampledStates <- t(cumSortedSampleStates[n, 
@@ -121,7 +108,7 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
         not.sampled.yet <- function(h) {
             cumSortedNotSampledStates[nsy.index(h), ]
         }
-        dA <- function(h, A, parms, ...) {                
+        dA <- function(h, A, parms, ...) {
             nsy <- not.sampled.yet(h)
             with(get.fgy(h), {
                 A_Y <- (A - nsy)/.Y
@@ -210,7 +197,6 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
             Q <- out[[1]]
             A <- out[[2]]
             L <- out[[3]]
-            
             if (is.nan(L)) {
                 L <- Inf
             }
@@ -247,7 +233,7 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
                 }
                 a <- A/.Y
                 extantLines <- which(isExtant)
-                tryCatch({
+                if(tryCatch({
                   .lambdamat <- (t(t(a)) %*% a) * .F
                   kl <- sample.int(m^2, size = 1, prob = as.vector(.lambdamat))
                   k <- 1 + ((kl - 1)%%m)
@@ -260,7 +246,8 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
                   u <- extantLines[u_i]
                   v <- sample(extantLines, size = 1, prob = probstates[, 
                     l])
-                }, error = function(e) browser())
+                  F
+                }, error = function(e) T)) return(NA)
                 ustates[u, ] <- mstates[u, ]
                 ustates[v, ] <- mstates[v, ]
                 a_u <- pmin(1, mstates[u, ]/.Y)
@@ -287,7 +274,7 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
                 edge.length[v] <- h1 - heights[v]
             }
         }
-        tryCatch({
+        if (tryCatch({
             self <- list(edge = edge, edge.length = edge.length, 
                 Nnode = Nnode, tip.label = tip.label, heights = heights, 
                 parentheights = parentheights, parent = parent, 
@@ -296,26 +283,17 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
                 sampleStates = sampleStates, maxSampleTime = maxSampleTime, 
                 inEdgeMap = inEdgeMap, outEdgeMap = outEdgeMap)
             class(self) <- c("binaryDatedTree", "phylo")
-            
-            order.nodes <- c(1:length(self$tip.label), (length(self$tip.label) + self$Nnode):(length(self$tip.label) + 1))
-			self$edge <- t(apply(self$edge, 1, function(e) order.nodes[e]))
-			self$lstates <- self$lstates[order.nodes,]
-			self$ustates <- self$ustates[order.nodes,]
-			self$mstates <- self$mstates[order.nodes,]
-#            sampleTimes2 <- sampleTimes[names(sortedSampleHeights)]
-#            sampleStates2 <- as.matrix(lstates[1:n, ], nrow = n)
-#            rownames(sampleStates2) <- tip.label
-#            phylo <- read.tree(text = write.tree(self))
-#            sampleTimes2 <- sampleTimes2[phylo$tip.label]
-#            sampleStates2 <- as.matrix(sampleStates2[phylo$tip.label, 
-#                ], nrow = length(phylo$tip.label))
-#            bdt <- binaryDatedTree(phylo, sampleTimes2, sampleStates = sampleStates2)
-#            bdt$lstates <- lstates
-#            bdt$mstates <- mstates
-#            bdt$ustates <- ustates
-        }, error = function(e) browser())
-#        return(bdt)
-		return(self)
+            sampleTimes2 <- sampleTimes[names(sortedSampleHeights)]
+            sampleStates2 <- as.matrix(lstates[1:n, ], nrow = n)
+            rownames(sampleStates2) <- tip.label
+            phylo <- read.tree(text = write.tree(self))
+            sampleTimes2 <- sampleTimes2[phylo$tip.label]
+            sampleStates2 <- as.matrix(sampleStates2[phylo$tip.label, 
+                ], nrow = length(phylo$tip.label))
+            bdt <- binaryDatedTree(phylo, sampleTimes2, sampleStates = sampleStates2)
+            F
+        }, error = function(e) T)) return(NA)
+        return(bdt)
     }
     if (any(is.null(cluster))) {
         result <- lapply(1:n.reps, run1)
@@ -326,56 +304,46 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
     return(result[!is.na(result)])
 }
 
-make.mod <- function(treament.start, treatment.end, alpha, trans=10) {
-	function(tp) {
-		if (tp > treatment.start && tp < treament.start + trans) {
-			log(alpha)/trans
-		} else if (tp > treatment.end && tp < treatment.end + trans) {
-			-log(alpha)/trans
-		} else {
-			0
-		}
+simulate.binary.dated.tree.fgy.wrapper <- function(times, births, migrations, demeSizes, sampleTimes, sampleStates, n.reps) {
+	i = 1
+
+	trees <- list()
+
+	repeat {
+		cat(paste0(" ", i))
+	
+		trees <- c(trees, simulate.binary.dated.tree.fgy(times, births, migrations, demeSizes, sampleTimes, sampleStates, integrationMethod="lsoda", n.reps=n.reps - length(trees)))
+		
+		i <- i + 1
+		
+		cat(paste0("(", length(trees), ")"))
+		
+		if (length(trees) >= n.reps) break
 	}
+		
+	trees
 }
 
-# init params
-lambda <- 1e4
-d.T <- 0.01
-eta <- 0.0001
-d.0 <- 0.001
-a.L <- 0.1
-delta <- 1
-N <- 2000
-c <- 23
-r.L <- 0
+cat("initializing...\n")
 
-V.0 <- 453000
-L.0 <- 4.48
-Ts.0 <- 5210
+params.table <- read.table(paste0(folder, "params.txt"), col.names=c("names", "init", "less", "greater"))
 
-T <- 479000
-E <- 2.4e-8
-tp <- 0
+params.names <- unlist(params.table$names)
+params.list <- params.table$init
+names(params.list) <- params.names
+params.list <- lapply(params.list, function(x) x)
 
-ntimes <- 10
-nsamples <- 20
-start.time <- 0
-end.time <- 1000
-treatment.start <- 10000000
-treatment.end <- 100000000
-epsilon <- 0.7
-do.mod <- make.mod(treatment.start, treatment.end, 1-epsilon)
+params.list.less <- params.table$less
+names(params.list.less) <- params.names
+params.list.less <- lapply(params.list.less, function(x) x)
 
-if (!is.null(params.file) && !is.na(params.file)) {
-	params <- read.table(params.file, header=F, sep="\t")
-	for (i in 1:(length(params$V1))) {
-		eval(parse(text=paste(params$V1[i], params$V2[i], sep="=")))
-	}
-}
+params.list.greater <- params.table$greater
+names(params.list.greater) <- params.names
+params.list.greater <- lapply(params.list.greater, function(x) x)
 
 demes <- c("V", "L", "Ts")
 
-births <- t(rbind(c('0', '0', 'parms$N * parms$delta * Ts'), c('parms$eta * E * T * V', 'parms$r.L * L', '0'), c('(1 - parms$eta) * E * T * V', '0', '0')))
+births <- t(rbind(c('0', '0', 'parms$N * parms$delta * Ts'), c('parms$eta * parms$k * T * V', '0', '0'), c('(1 - parms$eta) * parms$k * T * V', '0', '0')))
 rownames(births) <- colnames(births) <- demes
 
 migrations <- t(rbind(c('0', '0', '0'), c('0', '0', '0'), c('0', 'parms$a.L * L', '0')))
@@ -384,60 +352,93 @@ rownames(migrations) <- colnames(migrations) <- demes
 deaths <- c('parms$c * V', 'parms$d.0 * L', 'parms$delta * Ts')
 names(deaths) <- demes
 
-nonDemeDynamics <- c('parms$lambda - parms$d.T * T - E * V * T', 'do.mod(t) * E')
-names(nonDemeDynamics) <- c('T', 'E')
+nonDemeDynamics <- c('parms$lambda - parms$d.T * T - parms$k * V * T')
+names(nonDemeDynamics) <- c('T')
 
-params.list <- list(lambda=lambda, d.T=d.T, eta=eta, d.0=d.0, a.L=a.L, delta=delta, N=N, c=c, r.L=r.L)
-params.names <- names(params.list)
-pop.list <- c(V=V.0, L=L.0, Ts=Ts.0, T=T, E=E)
+n.reps <- 5
+ntimes <- 10
+nsamples.V <- 40
+nsamples.T <- 60
+start.time <- 0
+end.time <- 1000
 
-tfgy <- make.fgy(start.time, end.time, births, deaths, nonDemeDynamics, pop.list, migrations=migrations, parms=params.list, fgyResolution=1000, integrationMethod = "lsoda")
-#dm <- build.demographic.process(births=births, deaths=deaths, migrations=migrations, nonDemeDynamics=nonDemeDynamics, parameterNames=params.names, rcpp=F, sde=F)
+n <- length(unlist(params.list))
+n.trials <- 1 + 2 * n
+#n.trials <- 1 + 2 * n + 4 * n * (n - 1) / 2
 
-par(mfcol=c(1, 2))
+var.tab <- as.data.frame(t(matrix(unlist(params.list), nrow=n, ncol=n.trials)))
+names(var.tab) <- params.names
 
-show.demographic.process(tfgy, col=c("red", "green", "blue", "yellow", "cyan"))
-#tfgy <- show.demographic.process(dm, theta=params.list, x0=pop.list, t0=0, t1=end.time, col=c("red", "green", "blue", "yellow", "cyan"), res=2000)
+for (i in 2:n.trials) {
+	if (i <= n + 1)
+		var.tab[i, i - 1] <- params.list.less[i - 1]
+	else if (i <= 2 * n + 1)
+		var.tab[i, i - n -  1] <- params.list.greater[i - n - 1]
+}
 
-cells <- tfgy[[5]][, "L"] + tfgy[[5]][, "Ts"]
-if (T) {
-sampleStates <- t(matrix(c(1, 0, 0), nrow=3, ncol=ntimes * nsamples * 3))
-sampleTimes <- rev(unlist(lapply((1:ntimes)*end.time/ntimes, rep, 3 * nsamples)))
+if (F) {
+for (i in 2:n.trials) {
+	if (i <= n + 1)
+		var.tab[i, i-1] <- var.tab[i, i - 1] * 1.1
+	else if (i <= 2 * n + 1)
+		var.tab[i, i - n -  1] <- var.tab[i, i - n - 1] * 0.9
+	else if (i <= 3 * n + 1)
+		var.tab[i, i - 2 * n -  1] <- var.tab[i, i - 2 * n - 1] * 1.25
+	else
+		var.tab[i, i - 3 * n -  1] <- var.tab[i, i - 3 * n - 1] * 0.75
+}
+}
 
-if (T) {
-for (i in 0:(ntimes-1)) {
-	for (j in 0:(nsamples-1)) {
-		sampleStates[i * nsamples * 3 + j * 3 + 1:2,] <- t(rmultinom(n=2, size=1, prob=c(0, tfgy[[5]][1000 / ntimes * (i + 1), "L"]/cells[1000 / ntimes * (i + 1)], tfgy[[5]][1000 / ntimes * (i + 1), "Ts"]/cells[1000 / ntimes * (i + 1)])))
+if (F) {
+combs <- combn(seq(1, n), 2)
+
+for (i in 2:n.trials) {
+	if (i %% 1000 == 0)
+		cat(paste0(i, " "))
+		
+	if (i <= n + 1)
+		var.tab[i, i - 1] <- var.tab[i, i - 1] * 1.1
+	else if (i <= 2*n + 1)
+		var.tab[i, i - n -  1] <- var.tab[i, i - n - 1] * 0.9
+	else {
+		r <- i - 2 * n - 2
+	
+		s.j <- r %/% (n * (n - 1))
+		s.k <- r %% (n * (n - 1)) %/% (n * (n-1) / 2)
+		v <- combs[, r %% (n * (n - 1) / 2) + 1]
+				
+		var.tab[i, v[1]] <- var.tab[i, v[1]] * (1.1 - .2 * s.j)
+		var.tab[i, v[2]] <- var.tab[i, v[2]] * (1.1 - .2 * s.k)
 	}
 }
 }
 
-colnames(sampleStates) <- demes
-} else {
-sampleTimes <- c(rep(14, 7), rep(1197, 20), rep(1454, 18), rep(1734, 34), rep(2560, 26))
-sampleStates <- t(matrix(c(1, 0, 0), nrow=3, ncol=105))
-colnames(sampleStates) <- demes
+cat("\n")
 
-sampleStates[1:7,] <- t(rmultinom(n=7, size=1, prob=c(0, tfgy[[5]][1000 / 2560 * 14, "L"]/cells[1000 / 2560 * 14], tfgy[[5]][1000 / 2560 * 14, "Ts"]/cells[1000 / 2560 * 14])))
-sampleStates[8:27,] <- t(rmultinom(n=20, size=1, prob=c(0, tfgy[[5]][1000 / 2560 * 1197, "L"]/cells[1000 / 2560 * 1197], tfgy[[5]][1000 / 2560 * 1197, "Ts"]/cells[1000 / 2560 * 1197])))
-sampleStates[28:45,] <- t(rmultinom(n=18, size=1, prob=c(0, tfgy[[5]][1000 / 2560 * 1454, "L"]/cells[1000 / 2560 * 1454], tfgy[[5]][1000 / 2560 * 1454, "Ts"]/cells[1000 / 2560 * 1454])))
-sampleStates[46:71,] <- t(rmultinom(n=26, size=1, prob=c(0, tfgy[[5]][1000 / 2560 * 1734, "L"]/cells[1000 / 2560 * 1734], tfgy[[5]][1000 / 2560 * 1734, "Ts"]/cells[1000 / 2560 * 1734])))
-sampleStates[80:97,] <- t(rmultinom(n=18, size=1, prob=c(0, tfgy[[5]][1000 / 2560 * 1734, "L"]/cells[1000 / 2560 * 1734], tfgy[[5]][1000 / 2560 * 1734, "Ts"]/cells[1000 / 2560 * 1734])))
-}
+suppress <- lapply(1:n.trials, function(i) {
+		cat(i)
+		p <- var.tab[i,]
 
-trees <- simulate.binary.dated.tree.fgy(tfgy[[1]], tfgy[[2]], tfgy[[3]], tfgy[[4]], sampleTimes, sampleStates, integrationMethod="lsoda", n.reps=100)
-tree <- trees[[1]]
-#tree <- sim.co.tree.fgy(tfgy, sampleTimes, sampleStates)
+		pop.list <- get.steady.state(p)
 
-tree$tip.label <- apply(tree$sampleStates, 1, function(x) c("V", "L", "Ts")[which(x == 1)])
+		tfgy <- make.fgy(start.time, end.time, births, deaths, nonDemeDynamics, pop.list, migrations=migrations, parms=p, fgyResolution=1000, integrationMethod="lsoda")
 
-cols <- unlist(apply(tree$sampleStates, 1, function(x) c("red", "green", "blue")[which(x == 1)]))
+		cells <- tfgy[[5]][, "L"] + tfgy[[5]][, "Ts"]
+		sampleStates <- t(matrix(c(1, 0, 0), nrow=3, ncol=ntimes * (nsamples.V + nsamples.T)))
+		sampleTimes <- rev(unlist(lapply((1:ntimes)*end.time/ntimes, rep, nsamples.V + nsamples.T)))
 
-edge.cols <- unlist(apply(tree$edge, 1, function(x) {
-		co <- tree$lstates[x[2], ]
-		rgb(co[1], co[2], co[3])
-	}))
-	
-tree$node.label <- unlist(apply(tree$lstates[(1:tree$Nnode) + length(tree$tip.label),], 1, function(co) rgb(co[1], co[2], co[3])))
+		for (j in 0:(ntimes-1)) {
+			sampleStates[j * (nsamples.T + nsamples.V) + 1:nsamples.T,] <- t(rmultinom(n=nsamples.T, size=1, prob=c(0, tfgy[[5]][1000 / ntimes * (j + 1), "L"]/cells[1000 / ntimes * (j + 1)], tfgy[[5]][1000 / ntimes * (j + 1), "Ts"]/cells[1000 / ntimes * (j + 1)])))
+		}
 
-plot.phylo(tree, cex=.75, tip.color=cols, edge.color=edge.cols, show.node.label=F)
+		colnames(sampleStates) <- demes
+
+		cat(" building tree...")
+
+		trees <- simulate.binary.dated.tree.fgy.wrapper(tfgy[[1]], tfgy[[2]], tfgy[[3]], tfgy[[4]], sampleTimes, sampleStates, n.reps=n.reps)
+
+		trees <- lapply(trees, function(tree) {tree$tip.label <- paste(tree$tip.label, apply(tree$sampleStates, 1, function(x) c("V", "L", "T")[which(x == 1)]), sep="."); tree})
+
+		lapply(1:n.reps, function(j) write.tree(trees[[j]], sprintf("%stree.%04d.%02d.tre", folder, i, j)))
+		cat("\n")
+	})

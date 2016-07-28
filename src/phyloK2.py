@@ -1,5 +1,6 @@
 # by Art FY Poon, 2012
 # modified by Rosemary McCloskey, 2014
+# modified by Bradley R Jones, 2016
 
 from Bio import Phylo
 #from numpy import zeros
@@ -70,6 +71,7 @@ class PhyloKernel:
             print('sigma = {}'.format(self.sigma))
             print('gaussFactor = {}'.format(self.gaussFactor))
             print('decayFactor = {}'.format(self.decayFactor))
+            print('labelFactor = {}'.format(self.labelFactor))
         
     @property
     def ntrees (self):

@@ -1,0 +1,14 @@
+Files:
+---------
+DiffRisk.R - models the Diff Risk example from Art's Kernel ABC paper
+PCA.R - creates the example set for PCA
+PCA2.R - does the PCA
+VolzHIV.R - Eric's example from his paper
+check_example.R - comparison of rcolgem and phydynR using the example from zEric's paper
+gen_trees.R - generates trees 
+model-simple.R - a simple model
+model.R - first attempt to implement a model
+model2.R - second attempt to implement a model
+model3.R - third attempt to implement a model
+phyloK2.py - kernel code
+prepareKernel.py - wrapper to create kernel matices

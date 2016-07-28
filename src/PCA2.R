@@ -1,8 +1,10 @@
 library(kernlab)
 
+folder <- "../data/pca/"
+
 cat("initializing...\n")
 
-params.table <- read.table("../data/pca/params.txt", col.names=c("names", "init", "less", "greater"))
+params.table <- read.table(paste0(folder, "params.txt"), col.names=c("names", "init", "less", "greater"))
 
 params.names <- unlist(params.table$names)
 params.list <- params.table$init
@@ -16,6 +18,17 @@ n.trials <- 1 + 2 * n
 var.tab <- as.data.frame(t(matrix(unlist(params.list), nrow=n, ncol=n.trials)))
 names(var.tab) <- params.names
 
+var.tab <- as.data.frame(t(matrix(unlist(params.list), nrow=n, ncol=n.trials)))
+names(var.tab) <- params.names
+
+for (i in 2:n.trials) {
+	if (i <= n + 1)
+		var.tab[i, i - 1] <- params.list.less[i - 1]
+	else if (i <= 2 * n + 1)
+		var.tab[i, i - n -  1] <- params.list.greater[i - n - 1]
+}
+
+if (F) {
 for (i in 2:n.trials) {
 #	if (i <= n + 1)
 #		var.tab[i, i-1] <- var.tab[i, i - 1] * 1.1
@@ -25,6 +38,7 @@ for (i in 2:n.trials) {
 		var.tab[i, i - 1] <- var.tab[i, i - 1] * 1.25
 	else
 		var.tab[i, i - n - 1] <- var.tab[i, i - n - 1] * 0.75
+}
 }
 
 if (F) {
@@ -59,7 +73,7 @@ for (i in 2:n.trials) {
 
 cat("reading kernels...\n")
 
-kernels <- as.matrix(read.csv("../data/pca/kernels.csv", header=T))
+kernels <- as.matrix(read.csv(paste0(folder, "kernels.csv"), header=T))
 
 diag(kernels) <- diag(kernels) / 2
 
@@ -71,9 +85,9 @@ kpc <- kpca(kernels, features=2)
 
 var.tab <- var.tab[rep(seq(1, nrow(var.tab)), rep(n.reps, nrow(var.tab))),]
 
-cols <- function(r) {
-	unlist(lapply(r, function(x) c("#ff000080", "#00ff0080", "#0000ff80")[abs(x / c(r[1], r[1] * 1.25, r[1] * 0.75) - 1) < 1e-8]))
-}
+#cols <- function(r) {
+#	unlist(lapply(r, function(x) c("#ff000080", "#00ff0080", "#0000ff80")[abs(x / c(r[1], r[1] * 1.25, r[1] * 0.75) - 1) < 1e-8]))
+#}
 
 #kernels <- kernels / (d %*% t(d))
 

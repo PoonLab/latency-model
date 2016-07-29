@@ -1,6 +1,6 @@
 library(kernlab)
 
-folder <- "../data/pca/"
+folder <- "../data/pca.extreme/"
 
 cat("initializing...\n")
 
@@ -29,7 +29,7 @@ names(var.tab) <- params.names
 var.tab <- as.data.frame(t(matrix(unlist(params.list), nrow=n, ncol=n.trials)))
 names(var.tab) <- params.names
 
-if (F) {
+if (T) {
 for (i in 2:n.trials) {
 	if (i <= n + 1)
 		var.tab[i, i - 1] <- params.list.less[i - 1]
@@ -38,7 +38,7 @@ for (i in 2:n.trials) {
 }
 }
 
-if (T) {
+if (F) {
 for (i in 2:n.trials) {
 #	if (i <= n + 1)
 #		var.tab[i, i-1] <- var.tab[i, i - 1] * 1.1
@@ -95,6 +95,18 @@ kpc <- kpca(kernels)
 
 var.tab <- var.tab[rep(seq(1, nrow(var.tab)), rep(n.reps, nrow(var.tab))),]
 
+cols <- function(r) {
+	unlist(lapply(r, function(x) c("#ff000080", "#00ff0080", "#0000ff80")[abs(x / c(r[1], r[1] * 1.25, r[1] * 0.75) - 1) < 1e-8]))
+}
+
+ex.cols <- c("#ffffff",
+	"#ff0000", "#aa5500", "#55aa00",
+	"#00ff00", "#00aa55", "#0055aa",
+	"#0000ff", "#5500aa", "#aa0055",
+	"#800000", "#552b00", "#2b5500",
+	"#008000", "#00552b", "#002b55",
+	"#000080", "#2b0055", "#55002b")
+
 kernels.u <- as.matrix(read.csv(paste0(folder, "kernels.u.csv"), header=T))
 
 diag(kernels.u) <- diag(kernels.u) / 2
@@ -104,12 +116,6 @@ kernels.u <- kernels.u  + t(kernels.u)
 kernels.u <- as.kernelMatrix(kernels.u)
 
 kpc.u <- kpca(kernels.u)
-
-cols <- function(r) {
-	unlist(lapply(r, function(x) c("#ff000080", "#00ff0080", "#0000ff80")[abs(x / c(r[1], r[1] * 1.25, r[1] * 0.75) - 1) < 1e-8]))
-}
-
-#kernels <- kernels / (d %*% t(d))
 
 cat("doing PCA...\n")
 k.pca <- kpca(kernels, 2)

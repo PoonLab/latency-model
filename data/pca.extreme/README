@@ -1,0 +1,27 @@
+The rows and columns of the kernel matrices correspond to trees
+simulated using different model parameters.
+
+The first 5 trees use the model parameters of the first column
+of params.txt.
+
+The next 5 trees use the model parameters of the first column
+of params.txt except that the first parameter uses the second
+column value.
+
+The next 5 trees use the model parameters of the first column 
+of params.txt except that the second parameter uses the second
+column value.
+
+...
+
+The next 5 trees use the model parameters of the first column 
+of params.txt except that the first parameter uses the third
+column value.
+
+The next 5 trees use the model parameters of the first column
+of params.txt except that the second parameter uses the third
+column value.
+
+...
+
+

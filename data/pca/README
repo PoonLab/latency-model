@@ -1,0 +1,21 @@
+The rows and columns of the kernel matrices correspond to trees
+simulated using different model parameters.
+
+The first 10 trees use the base model parameters.
+
+The next 10 trees have the first parameter of params.txt scaled
+by 1.25.
+
+The next 10 trees have the second parameter of params.txt scaled
+by 1.25.
+
+...
+
+After that the next 10 trees have the first parameter scaled by
+0.75.
+
+Then the next 10 trees have the second parameter scale by 0,75.
+
+...
+
+

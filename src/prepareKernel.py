@@ -10,7 +10,7 @@ def do_kernel_wrapper(args):
 	return do_kernel(*args)
 
 def do_kernel(k, tree1, tree2):
-	k.kernel(tree1, tree2)
+	return k.kernel(tree1, tree2)
 
 if __name__ == '__main__':
 	print("Initializing...")
@@ -46,11 +46,10 @@ if __name__ == '__main__':
 				kernels = p.map(do_kernel_wrapper, [(k, trees[i], trees[j]) for j in xrange(i, n)])
 				
 				row = [0] * i
-		        row.extend([str(x) for x in kernels])
-	        
-		        w.writerow(row)
-	        
-	          	f.flush()
+				row.extend([str(x) for x in kernels])
+				
+				w.writerow(row)
+				f.flush()
 			
 	print("\nComputing kernels (unlabelled)...")
 
@@ -69,5 +68,4 @@ if __name__ == '__main__':
 			row.extend([str(x) for x in kernels])
 	
 			w.writerow(row)
-			
 			f.flush()

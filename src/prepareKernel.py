@@ -4,55 +4,70 @@ import phyloK2 as K2
 import sys
 import glob
 import csv
+import multiprocessing as mp
 
-print("Initializing...")
+def do_kernel_wrapper(args):
+	return do_kernel(*args)
 
-tree_dir = sys.argv[1]
-paths = glob.glob(tree_dir + "*.tre")
-tree_names = [s[len(tree_dir):-4] for s in paths]
+def do_kernel(k, tree1, tree2):
+	k.kernel(tree1, tree2)
 
-trees = [Phylo.read(x, 'newick') for x in paths]
+if __name__ == '__main__':
+	print("Initializing...")
 
-k2 = K2.PhyloKernel(scaleFactor=0.3, gaussFactor=2)
+	tree_dir = sys.argv[1]
+	paths = glob.glob(tree_dir + "*.tre")
+	tree_names = [s[len(tree_dir):-4] for s in paths]
 
-for tree in trees:
-	tree.ladderize()
+	trees = [Phylo.read(x, 'newick') for x in paths]
 
-if sys.argv[2] != "":
-	k = K2.PhyloKernel(scaleFactor=0.3, gaussFactor=2, labelFactor=1, labelFilter=sys.argv[2])
-	print("Computing kernels (labelled)...")
+	k2 = K2.PhyloKernel(scaleFactor=0.3, gaussFactor=2)
 
-	with open(tree_dir + "kernels.csv", 'w') as f:
-		w = csv.writer(f)
+	for tree in trees:
+		tree.ladderize()
+		
+	n = len(trees)
 	
+	p = mp.Pool()
+	
+	if sys.argv[2] != "":
+		k = K2.PhyloKernel(scaleFactor=0.3, gaussFactor=2, labelFactor=1, labelFilter=sys.argv[2])
+		print("Computing kernels (labelled)...")
+
+		with open(tree_dir + "kernels.csv", 'w') as f:		
+			w = csv.writer(f)
+	
+			w.writerow(tree_names)
+		
+			for i in xrange(0, n):
+				print i + 1,
+				sys.stdout.flush()
+			
+				kernels = p.map(do_kernel_wrapper, [(k, trees[i], trees[j]) for j in xrange(i, n)])
+				
+				row = [0] * i
+		        row.extend([str(x) for x in kernels])
+	        
+		        w.writerow(row)
+	        
+	          	f.flush()
+			
+	print("\nComputing kernels (unlabelled)...")
+
+	with open(tree_dir + "kernels.u.csv", 'w') as f:
+		w = csv.writer(f)
+
 		w.writerow(tree_names)
 		
-		for i in xrange(0, len(trees)):		
-			kernels = [k.kernel(trees[i], trees[j]) if j >= i else 0 for j in xrange(0, len(trees))]
-
-			row = [str(x) for x in kernels]
+		for i in xrange(0, n):
+			print i + 1,
+			sys.stdout.flush()
+			
+			kernels = p.map(do_kernel_wrapper, [(k2, trees[i], trees[j]) for j in xrange(i, n)])
+				
+			row = [0] * i
+			row.extend([str(x) for x in kernels])
 	
 			w.writerow(row)
-		
-			if i % 10 == 9:
-				print i + 1
-				f.flush()
 			
-print("\nComputing kernels (unlabelled)...")
-
-with open(tree_dir + "kernels.u.csv", 'w') as f:
-	w = csv.writer(f)
-
-	w.writerow(tree_names)
-		
-	for i in xrange(0, len(trees)):	
-	
-		kernels = [k2.kernel(trees[i], trees[j]) if j >= i else 0 for j in xrange(0, len(trees))]
-
-		row = [str(x) for x in kernels]
-	
-		w.writerow(row)
-		
-		if i % 10 == 9:
-			print i + 1
 			f.flush()

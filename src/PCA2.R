@@ -11,6 +11,14 @@ params.list <- params.table$init
 names(params.list) <- params.names
 params.list <- lapply(params.list, function(x) x)
 
+params.list.less <- params.table$less
+names(params.list.less) <- params.names
+params.list.less <- lapply(params.list.less, function(x) x)
+
+params.list.greater <- params.table$greater
+names(params.list.greater) <- params.names
+params.list.greater <- lapply(params.list.greater, function(x) x)
+
 n.reps <- 10
 n <- length(unlist(params.list))
 n.trials <- 1 + 2 * n
@@ -21,14 +29,16 @@ names(var.tab) <- params.names
 var.tab <- as.data.frame(t(matrix(unlist(params.list), nrow=n, ncol=n.trials)))
 names(var.tab) <- params.names
 
+if (F) {
 for (i in 2:n.trials) {
 	if (i <= n + 1)
 		var.tab[i, i - 1] <- params.list.less[i - 1]
 	else if (i <= 2 * n + 1)
 		var.tab[i, i - n -  1] <- params.list.greater[i - n - 1]
 }
+}
 
-if (F) {
+if (T) {
 for (i in 2:n.trials) {
 #	if (i <= n + 1)
 #		var.tab[i, i-1] <- var.tab[i, i - 1] * 1.1
@@ -81,13 +91,23 @@ kernels <- kernels + t(kernels)
 
 kernels <- as.kernelMatrix(kernels)
 
-kpc <- kpca(kernels, features=2)
+kpc <- kpca(kernels)
 
 var.tab <- var.tab[rep(seq(1, nrow(var.tab)), rep(n.reps, nrow(var.tab))),]
 
-#cols <- function(r) {
-#	unlist(lapply(r, function(x) c("#ff000080", "#00ff0080", "#0000ff80")[abs(x / c(r[1], r[1] * 1.25, r[1] * 0.75) - 1) < 1e-8]))
-#}
+kernels.u <- as.matrix(read.csv(paste0(folder, "kernels.u.csv"), header=T))
+
+diag(kernels.u) <- diag(kernels.u) / 2
+
+kernels.u <- kernels.u  + t(kernels.u)
+
+kernels.u <- as.kernelMatrix(kernels.u)
+
+kpc.u <- kpca(kernels.u)
+
+cols <- function(r) {
+	unlist(lapply(r, function(x) c("#ff000080", "#00ff0080", "#0000ff80")[abs(x / c(r[1], r[1] * 1.25, r[1] * 0.75) - 1) < 1e-8]))
+}
 
 #kernels <- kernels / (d %*% t(d))
 

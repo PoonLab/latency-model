@@ -6,32 +6,11 @@ library(ade4)
 
 folder <- "../data/pca.extreme/"
 
-get.steady.state <- function(params) {
-	V.0 <- with(params, N * lambda / c * (1 - d.0 / (d.0 + a.L) * eta) - d.T / k)
-	T.0 <- with(params, lambda / (d.T + k * V.0))
-	L.0 <- with(params, eta * k * V.0 * T.0 / (d.0 + a.L))
-	Ts.0 <- with(params, c * V.0 / (N * delta))
-	
-	c(V=V.0, T=T.0, L=L.0, Ts=Ts.0)
-}
+
 
 
 cat("initializing...\n")
 
-params.table <- read.table(paste0(folder, "params.txt"), col.names=c("names", "init", "less", "greater"))
-
-params.names <- unlist(params.table$names)
-params.list <- params.table$init
-names(params.list) <- params.names
-params.list <- lapply(params.list, function(x) x)
-
-params.list.less <- params.table$less
-names(params.list.less) <- params.names
-params.list.less <- lapply(params.list.less, function(x) x)
-
-params.list.greater <- params.table$greater
-names(params.list.greater) <- params.names
-params.list.greater <- lapply(params.list.greater, function(x) x)
 
 ###################################
 
@@ -71,6 +50,24 @@ names(nonDemeDynamics) <- c('T')
 
 ###################################
 
+# read parameter limits from file
+params.table <- read.table(paste0(folder, "params.txt"), col.names=c("names", "init", "less", "greater"), row.names=1)
+
+params.names <- row.names(params.table)
+
+# convert data frame into associative lists
+params.list <- params.table$init
+names(params.list) <- params.names
+params.list <- lapply(params.list, function(x) x)
+
+params.list.less <- params.table$less
+names(params.list.less) <- params.names
+params.list.less <- lapply(params.list.less, function(x) x)
+
+params.list.greater <- params.table$greater
+names(params.list.greater) <- params.names
+params.list.greater <- lapply(params.list.greater, function(x) x)
+
 
 n.reps <- 5
 ntimes <- 10
@@ -80,7 +77,7 @@ start.time <- 0
 end.time <- 1000
 
 n <- length(unlist(params.list))
-n.trials <- 1 + 2 * n
+n.trials <- 1 + 2 * n  # every parameter is modified twice from baseline
 #n.trials <- 1 + 2 * n + 4 * n * (n - 1) / 2
 
 var.tab <- as.data.frame(t(matrix(unlist(params.list), nrow=n, ncol=n.trials)))
@@ -93,44 +90,55 @@ for (i in 2:n.trials) {
 		var.tab[i, i - n -  1] <- params.list.greater[i - n - 1]
 }
 
-if (F) {
-for (i in 2:n.trials) {
-	if (i <= n + 1)
-		var.tab[i, i-1] <- var.tab[i, i - 1] * 1.1
-	else if (i <= 2 * n + 1)
-		var.tab[i, i - n -  1] <- var.tab[i, i - n - 1] * 0.9
-	else if (i <= 3 * n + 1)
-		var.tab[i, i - 2 * n -  1] <- var.tab[i, i - 2 * n - 1] * 1.25
-	else
-		var.tab[i, i - 3 * n -  1] <- var.tab[i, i - 3 * n - 1] * 0.75
-}
-}
 
-if (F) {
-combs <- combn(seq(1, n), 2)
+# for (i in 2:n.trials) {
+	# if (i <= n + 1)
+		# var.tab[i, i-1] <- var.tab[i, i - 1] * 1.1
+	# else if (i <= 2 * n + 1)
+		# var.tab[i, i - n -  1] <- var.tab[i, i - n - 1] * 0.9
+	# else if (i <= 3 * n + 1)
+		# var.tab[i, i - 2 * n -  1] <- var.tab[i, i - 2 * n - 1] * 1.25
+	# else
+		# var.tab[i, i - 3 * n -  1] <- var.tab[i, i - 3 * n - 1] * 0.75
+# }
 
-for (i in 2:n.trials) {
-	if (i %% 1000 == 0)
-		cat(paste0(i, " "))
+
+
+# combs <- combn(seq(1, n), 2)
+
+# for (i in 2:n.trials) {
+	# if (i %% 1000 == 0)
+		# cat(paste0(i, " "))
 		
-	if (i <= n + 1)
-		var.tab[i, i - 1] <- var.tab[i, i - 1] * 1.1
-	else if (i <= 2*n + 1)
-		var.tab[i, i - n -  1] <- var.tab[i, i - n - 1] * 0.9
-	else {
-		r <- i - 2 * n - 2
+	# if (i <= n + 1)
+		# var.tab[i, i - 1] <- var.tab[i, i - 1] * 1.1
+	# else if (i <= 2*n + 1)
+		# var.tab[i, i - n -  1] <- var.tab[i, i - n - 1] * 0.9
+	# else {
+		# r <- i - 2 * n - 2
 	
-		s.j <- r %/% (n * (n - 1))
-		s.k <- r %% (n * (n - 1)) %/% (n * (n-1) / 2)
-		v <- combs[, r %% (n * (n - 1) / 2) + 1]
+		# s.j <- r %/% (n * (n - 1))
+		# s.k <- r %% (n * (n - 1)) %/% (n * (n-1) / 2)
+		# v <- combs[, r %% (n * (n - 1) / 2) + 1]
 				
-		var.tab[i, v[1]] <- var.tab[i, v[1]] * (1.1 - .2 * s.j)
-		var.tab[i, v[2]] <- var.tab[i, v[2]] * (1.1 - .2 * s.k)
-	}
-}
-}
+		# var.tab[i, v[1]] <- var.tab[i, v[1]] * (1.1 - .2 * s.j)
+		# var.tab[i, v[2]] <- var.tab[i, v[2]] * (1.1 - .2 * s.k)
+	# }
+# }
+
 
 cat("\n")
+
+
+get.steady.state <- function(params) {
+	V.0 <- with(params, N * lambda / c * (1 - d.0 / (d.0 + a.L) * eta) - d.T / k)
+	T.0 <- with(params, lambda / (d.T + k * V.0))
+	L.0 <- with(params, eta * k * V.0 * T.0 / (d.0 + a.L))
+	Ts.0 <- with(params, c * V.0 / (N * delta))
+	
+	c(V=V.0, T=T.0, L=L.0, Ts=Ts.0)
+}
+
 
 suppress <- lapply(1:n.trials, function(i) {
 		cat(i)
@@ -159,4 +167,3 @@ suppress <- lapply(1:n.trials, function(i) {
 		lapply(1:n.reps, function(j) write.tree(trees[[j]], sprintf("%stree.%04d.%02d.tre", folder, i, j)))
 		cat("\n")
 	})
-	

@@ -85,13 +85,19 @@ cat("reading kernels...\n")
 
 kernels <- as.matrix(read.csv(paste0(folder, "kernels.csv"), header=T))
 
+# convert into symmetric matrix
 diag(kernels) <- diag(kernels) / 2
-
 kernels <- kernels + t(kernels)
 
-kernels <- as.kernelMatrix(kernels)
+# normalize matrix
+norm.km <- matrix(0, nrow=nrow(kernels), ncol=ncol(kernels))
+for (i in 1:nrow(kernels)) {
+	for (j in 1:ncol(kernels)) {
+		norm.km[i,j] <- kernels[i,j] / sqrt(kernels[i,i]*kernels[j,j])
+	}
+}
 
-kpc <- kpca(kernels)
+kpc <- kpca(as.kernelMatrix(norm.km))
 
 var.tab <- var.tab[rep(seq(1, nrow(var.tab)), rep(n.reps, nrow(var.tab))),]
 

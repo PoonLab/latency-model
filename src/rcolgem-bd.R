@@ -292,7 +292,7 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
     return(result[!is.na(result)])
 }
 
-simulate.binary.dated.tree.fgy.wrapper <- function(times, births, migrations, demeSizes, sampleTimes, sampleStates, n.reps) {
+simulate.binary.dated.tree.fgy.wrapper <- function(times, births, migrations, demeSizes, sampleTimes, sampleStates, n.reps, method="lsoda") {
 	i = 1
 
 	trees <- list()
@@ -300,7 +300,7 @@ simulate.binary.dated.tree.fgy.wrapper <- function(times, births, migrations, de
 	repeat {
 		cat(paste0(" ", i))
 	
-		trees <- c(trees, simulate.binary.dated.tree.fgy(times, births, migrations, demeSizes, sampleTimes, sampleStates, integrationMethod="lsoda", n.reps=n.reps - length(trees)))
+		trees <- c(trees, simulate.binary.dated.tree.fgy(times, births, migrations, demeSizes, sampleTimes, sampleStates, integrationMethod=method, n.reps=n.reps - length(trees)))
 		
 		i <- i + 1
 		

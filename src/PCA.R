@@ -16,6 +16,8 @@ cat("initializing...\n")
 
 ## Define the model
 
+
+## virus lineages can be sampled from:
 # V = free virus
 # L = latently infected cells
 # Ts = active infected cells
@@ -39,6 +41,9 @@ rownames(births) <- colnames(births) <- demes
 migrations <- t(rbind(c('0', '0', '0'), c('0', '0', '0'), c('0', 'parms$a.L * L', '0')))
 rownames(migrations) <- colnames(migrations) <- demes
 
+# free viruses removed at rate (c)
+# latently-infected cells removed at rate (d.0)
+# active infected cells removed at rate by bursting (delta)
 deaths <- c('parms$c * V', 'parms$d.0 * L', 'parms$delta * Ts')
 names(deaths) <- demes
 

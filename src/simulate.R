@@ -4,7 +4,8 @@ source('rcolgem-bd.R')
 
 library(ade4)
 
-folder <- "../data/pca.extreme/"
+# output destination folder
+folder <- "../data/test/"
 
 
 
@@ -56,53 +57,70 @@ names(nonDemeDynamics) <- c('T')
 ###################################
 
 
-# default model parameters
+# default model parameters, taken from Rong and Perelson (2009; PLOS Comput Biol e1000533)
 params <- list()
-params["lambda"] <- 1e4  # growth rate of uninfected cells
-params["d.T"] <- 1e-2    # death rate of uninfected cells
-params["k"] <- 2.4e-8    # rate of infection
-params["eta"] <- 0.01   # probability of entering latent state
-params["d.0"] <- 0.001   # death rate of latently-infected cells
-params["a.L"] <- 0.01     # reactivation rate of latently-infected cells
-params["delta"] <- 1.0   # death rate of active infected cells
-params["N"] <- 2e3       # number of virions produced by cell death
-params["c"] <- 5.4       # removal rate of free virus 
+params["lambda"] <- 1e4  # growth rate of uninfected cells (per mL per day)
+params["d.T"] <- 0.01    # death rate of uninfected cells (per day)
+params["k"] <- 2.4e-8    # rate of infection (mL/day)
+params["eta"] <- 0.001   # probability of entering latent state
+params["d.0"] <- 0.0001   # death rate of latently-infected cells
+params["a.L"] <- 0.01     # rate of transition from latently to productively infected cells
+params["delta"] <- 1.0   # death rate of productively infected cells (per day)
+params["N"] <- 2000      # number of virions produced by cell death
+params["c"] <- 23        # clearance rate of free virus (per day)
 
 
-get.steady.state <- function(params) {
-	V.0 <- with(params, N * lambda / c * (1 - d.0 / (d.0 + a.L) * eta) - d.T / k)
-	T.0 <- with(params, lambda / (d.T + k * V.0))
-	L.0 <- with(params, eta * k * V.0 * T.0 / (d.0 + a.L))
-	Ts.0 <- with(params, c * V.0 / (N * delta))
+# # get.steady.state <- function(params) {
+	## Equation (2) from paper (epsilon = 0)
+	# V.0 <- with(params, N * lambda / c * (1 - d.0 / (d.0 + a.L) * eta) - d.T / k)
+	# T.0 <- with(params, lambda / (d.T + k * V.0))
+	# L.0 <- with(params, eta * k * V.0 * T.0 / (d.0 + a.L))
+	# Ts.0 <- with(params, c * V.0 / (N * delta))
 	
-	c(V=V.0, T=T.0, L=L.0, Ts=Ts.0)
-}
+	# c(V=V.0, T=T.0, L=L.0, Ts=Ts.0)
+# }
 
-n.trials <- 1
-n.reps <- 3  # number of trees to simulate
+
 start.time <- 0
-end.time <- 50  # time elapsed in units of ???
-ntimes <- 3  # number of time points we sample HIV RNA and DNA
-nsamples.V <- 50  # number of HIV RNA (free virus) samples
-nsamples.T <- 50  # number of cellular HIV DNA samples
+end.time <- 700  # time elapsed in units of days
+
 
 #integ.method <- 'lsoda'
 integ.method <- 'rk4'
-fgy.resol <- 500
+fgy.resol <- 1e4  # this needs to be pretty high for longer simulation time frames (end.time)
 
-x0 <- c(V=10, T=1e5, Ts=0, L=0)
+# set initial conditions
+x0 <- c(V=50, T=600, Ts=0.3, L=2)
+
+tfgy <- make.fgy(start.time, end.time, births, deaths, nonDemeDynamics, x0, migrations=migrations, parms=params, fgyResolution=fgy.resol, integrationMethod=integ.method)
+
+## It's a good idea to visually inspect the numerical solution of ODE first
+# plot(tfgy[[5]])
 
 
+ntimes <- 2  # number of time points we sample HIV RNA and DNA
+nsamples.V <- 50  # number of HIV RNA (free virus) samples PER TIME POINT
+nsamples.T <- 50  # number of cellular HIV DNA samples PER TIME POINT
 
-# initial population vector
-#pop.list <- get.steady.state(p)
-pop.list <- x0
-
-tfgy <- make.fgy(start.time, end.time, births, deaths, nonDemeDynamics, pop.list, migrations=migrations, parms=params, fgyResolution=fgy.resol, integrationMethod=integ.method)
-
+# time series of number of infected cells
 cells <- tfgy[[5]][, "L"] + tfgy[[5]][, "Ts"]
-sampleStates <- t(matrix(c(1, 0, 0), nrow=3, ncol=ntimes * (nsamples.V + nsamples.T)))
-sampleTimes <- rev(unlist(lapply((1:ntimes)*end.time/ntimes, rep, nsamples.V + nsamples.T)))
+
+# initialize sample state matrix
+sampleStates <- matrix(0, ncol=3, nrow=ntimes * (nsamples.V + nsamples.T))
+
+# assume uniform sampling over times
+time.points <- seq(fgy.resol, 0, -ceiling(fgy.resol/ntimes))[1:ntimes]
+#time.points <- (1:ntimes)*end.time/ntimes
+sampleTimes <- rep(time.points, each=nsamples.V+nsamples.T)
+#sampleTimes <- rev(unlist(lapply((1:ntimes)*end.time/ntimes, rep, nsamples.V + nsamples.T)))
+
+for (tp in time.points) {
+	ss <- as.list(tfgy[[5]][tp,])
+	nsamples.L <- rbinom(1, nsamples.T, ss$L/(ss$L+ss$Ts))
+	nsamples.Ts <- nsamples.T - nsamples.L
+	sv <- c(rep(1, nsamples.V), )  ##############
+}
+
 
 # assign deme sample states at random
 for (j in 0:(ntimes-1)) {
@@ -111,7 +129,9 @@ for (j in 0:(ntimes-1)) {
 
 colnames(sampleStates) <- demes
 
+
 #cat(" building tree...")
+n.reps <- 3  # number of trees to simulate
 
 trees <- simulate.binary.dated.tree.fgy.wrapper(tfgy[[1]], tfgy[[2]], tfgy[[3]], tfgy[[4]], sampleTimes, sampleStates, n.reps=n.reps, method='rk4')
 

@@ -31,15 +31,19 @@ births <- t(rbind(
 	
 	# (k) is infection rate of susceptible cells (unsampled compartment T)
 	# goes latent with probability (eta)
-	c('parms$eta * parms$k * T * V', '0', '0'), 
+	c('0', '0', '0'), 
 	
 	# otherwise infection remains active
-	c('(1 - parms$eta) * parms$k * T * V', '0', '0'))
+	c('0', '0', '0'))
 )
 rownames(births) <- colnames(births) <- demes
 
 # latent cells reactive at rate (a.L)
-migrations <- t(rbind(c('0', '0', '0'), c('0', '0', '0'), c('0', 'parms$a.L * L', '0')))
+migrations <- t(rbind(
+	c('0', '0', '0'), 
+	c('parms$eta * parms$k * T * V', '0', '0'), 
+	c('(1 - parms$eta) * parms$k * T * V', 'parms$a.L * L', '0')
+))
 rownames(migrations) <- colnames(migrations) <- demes
 
 # free viruses removed at rate (c)

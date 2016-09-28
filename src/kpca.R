@@ -31,3 +31,24 @@ par(xpd=NA); legend(x=1.5, y=0.5, legend=c(0.01, 0.02, 0.05, 0.1, 0.2), pch=21:2
 
 eig(kp.3) / sum(eig(kp.3))  # 57.6% in first two components
 
+
+# evaluate classifier performance by cross-validation
+rsqr <- function(kmat) {
+	labels <- rep(c(0.01, 0.02, 0.05, 0.1, 0.2), each=20)
+	res <- {}
+	for (rep in 1:100) {
+		train <- sample(1:nrow(kmat), nrow(kmat)/2)
+		fit <- ksvm(kmat[train,train], labels[train], type='nu-svr', kernel='matrix')
+		test.km <- as.kernelMatrix(kmat[-train,-train][,SVindex(fit), drop=FALSE])
+		pred <- predict(fit, test.km)
+		res <- c(res, summary(lm(pred~labels[-train]))$r.squared)
+	}
+	return(res)
+}
+
+r1 <- rsqr(km)
+r2 <- rsqr(km.3)
+
+boxplot(r1, r2)
+
+

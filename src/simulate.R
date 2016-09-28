@@ -2,7 +2,7 @@
 setwd('~/git/latency-model/src')
 source('rcolgem-bd.R')
 
-library(ade4)
+require(ade4)
 
 # output destination folder
 folder <- "../data/test/"
@@ -62,12 +62,12 @@ params <- list()
 params["lambda"] <- 1e4  # growth rate of uninfected cells (per mL per day)
 params["d.T"] <- 0.01    # death rate of uninfected cells (per day)
 params["k"] <- 2.4e-8    # rate of infection (mL/day)
-params["eta"] <- 0.001   # probability of entering latent state
-params["d.0"] <- 0.0001   # death rate of latently-infected cells
-params["a.L"] <- 0.01     # rate of transition from latently to productively infected cells
+params["eta"] <- 0.01   # probability of entering latent state
+params["d.0"] <- 0.001   # death rate of latently-infected cells
+params["a.L"] <- 0.2     # rate of transition from latently to productively infected cells
 params["delta"] <- 1.0   # death rate of productively infected cells (per day)
 params["N"] <- 2000      # number of virions produced by cell death
-params["c"] <- 23        # clearance rate of free virus (per day)
+params["c"] <- 23.        # clearance rate of free virus (per day)
 
 
 # # get.steady.state <- function(params) {
@@ -99,46 +99,53 @@ tfgy <- make.fgy(start.time, end.time, births, deaths, nonDemeDynamics, x0, migr
 
 
 ntimes <- 2  # number of time points we sample HIV RNA and DNA
-nsamples.V <- 50  # number of HIV RNA (free virus) samples PER TIME POINT
-nsamples.T <- 50  # number of cellular HIV DNA samples PER TIME POINT
+nsamples.V <- 100  # number of HIV RNA (free virus) samples PER TIME POINT
+nsamples.T <- 100  # number of cellular HIV DNA samples PER TIME POINT
+nsamples <- nsamples.V + nsamples.T
 
 # time series of number of infected cells
 cells <- tfgy[[5]][, "L"] + tfgy[[5]][, "Ts"]
 
 # initialize sample state matrix
-sampleStates <- matrix(0, ncol=3, nrow=ntimes * (nsamples.V + nsamples.T))
+sampleStates <- matrix(0, ncol=3, nrow=ntimes * nsamples)
+colnames(sampleStates) <- demes
 
 # assume uniform sampling over times
 time.points <- seq(fgy.resol, 0, -ceiling(fgy.resol/ntimes))[1:ntimes]
 #time.points <- (1:ntimes)*end.time/ntimes
-sampleTimes <- rep(time.points, each=nsamples.V+nsamples.T)
+sampleTimes <- tfgy[[5]][rep(time.points, each=nsamples), 1]
 #sampleTimes <- rev(unlist(lapply((1:ntimes)*end.time/ntimes, rep, nsamples.V + nsamples.T)))
 
-for (tp in time.points) {
-	ss <- as.list(tfgy[[5]][tp,])
-	nsamples.L <- rbinom(1, nsamples.T, ss$L/(ss$L+ss$Ts))
+for (i in 1:length(time.points)) {
+	tp <- time.points[i]
+	row <- as.list(tfgy[[5]][tp,])  # extract time slice
+	nsamples.L <- rbinom(1, nsamples.T, row$L/(row$L+row$Ts))  # number of latent cells in sample as binomial outcome
 	nsamples.Ts <- nsamples.T - nsamples.L
-	sv <- c(rep(1, nsamples.V), )  ##############
+	to.col <- c(rep(1, nsamples.V), rep(2, nsamples.L), rep(3, nsamples.Ts))
+	
+	# use (to.col) to assign 1's to random permutation of rows within time point block
+	permut <- sample(1:nsamples, nsamples)
+	for (j in 1:nsamples) {
+		sampleStates[permut[j]+(i-1)*nsamples, to.col[j]] <- 1
+	}
 }
 
-
-# assign deme sample states at random
-for (j in 0:(ntimes-1)) {
-	sampleStates[j * (nsamples.T + nsamples.V) + 1:nsamples.T,] <- t(rmultinom(n=nsamples.T, size=1, prob=c(0, tfgy[[5]][fgy.resol / ntimes * (j + 1), "L"]/cells[fgy.resol / ntimes * (j + 1)], tfgy[[5]][fgy.resol / ntimes * (j + 1), "Ts"]/cells[fgy.resol / ntimes * (j + 1)])))
-}
-
-colnames(sampleStates) <- demes
 
 
 #cat(" building tree...")
-n.reps <- 3  # number of trees to simulate
+n.reps <- 20  # number of trees to simulate
 
 trees <- simulate.binary.dated.tree.fgy.wrapper(tfgy[[1]], tfgy[[2]], tfgy[[3]], tfgy[[4]], sampleTimes, sampleStates, n.reps=n.reps, method='rk4')
 
-# label tips
-trees <- lapply(trees, function(tree) {tree$tip.label <- paste(tree$tip.label, apply(tree$sampleStates, 1, function(x) c("V", "L", "T")[which(x == 1)]), sep="."); tree})
+# label tips -- by default they are only numbered
+trees <- lapply(trees, function(tree) {
+	tree$tip.label <- paste(tree$tip.label, apply(tree$sampleStates, 1, function(x) demes[which(x == 1)]), sep="."); 
+	tree  # return
+})
+'multiPhylo' -> class(trees)
 
-# write to files
-lapply(1:n.reps, function(j) write.tree(trees[[j]], sprintf("%stree.%02d.tre", folder, j)))
-#cat("\n")
+# write trees out to file
+outfile <- paste0(folder, "aL-0.2.nwk")
+write.tree(trees, file=outfile, append=FALSE)
+
 

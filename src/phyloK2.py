@@ -3,28 +3,29 @@
 # modified by Bradley R Jones, 2016
 
 from Bio import Phylo
-#from numpy import zeros
+from numpy import zeros
 import math
 import multiprocessing as mp
 import re
 import time
 
 class PhyloKernel:
-    def __init__(self, 
-                kmat=None, 
-                rotate='ladder',
-                rotate2='none',
-                subtree=False,
-                normalize='mean', 
-                sigma=1, 
-                gaussFactor=1, 
-                withLengths=True, 
-                decayFactor=0.1, 
-                verbose=False, 
-                resolve_poly=False,
-                labelFactor=1,
-                labelFilter=None,
-                **kwargs):
+    def __init__(self,
+                 kmat=None,
+                 rotate='ladder',
+                 rotate2='none',
+                 subtree=False,
+                 normalize='mean',
+                 sigma=1,
+                 gaussFactor=1,
+                 withLengths=True,
+                 decayFactor=0.1,
+                 verbose=False,
+                 resolve_poly=False,
+                 labelFactor=1,
+                 labelFilter=None,
+                 **kwargs
+        ):
         """
         requires a list of Phylo.Tree objects
         can cast iterator returned by Phylo.parse() as list
@@ -53,7 +54,7 @@ class PhyloKernel:
         self.labelFactor = labelFactor
         self.labelFilter = labelFilter
         if labelFilter is not None:
-	        self.labelRegex = re.compile(self.labelFilter)
+            self.labelRegex = re.compile(self.labelFilter)
         
         self.pcache = {}
         self.subtrees = {} # used for matching polytomies
@@ -77,6 +78,9 @@ class PhyloKernel:
     def ntrees (self):
         return len(self.trees)
 
+    def reset_matrix(self):
+        self.kmat = zeros((self.ntrees, self.ntrees))
+
     def load_trees_from_file (self, handle):
         """
         Parse a file containing Newick tree strings
@@ -88,25 +92,13 @@ class PhyloKernel:
         for t in tree_iter:
             if self.rotate=='ladder':
                 t.ladderize()
-            elif rotate=='random':
-                scramble(t)
-            else:
-                pass
-        
-            if self.rotate2 == 'none':
-                pass
-            else:
-                gravitate(t, subtree=subtree, mode=rotate2)
-       
+
             if self.normalize != 'none': self.normalize_tree(t, mode=self.normalize)
-            if self.resolve_poly:
-                collapse_polytomies(t)
-            
+
             self.annotate_tree(t)
             self.trees.append(t)
             
-        self.kmat = [[0 for i in self.ntrees] for j in self.ntrees]
-        #self.kmat = zeros( (self.ntrees, self.ntrees) )
+        #self.kmat = [[0 for i in self.ntrees] for j in self.ntrees]
         self.is_kmat_computed = False
         self.delta_values = {}
     
@@ -120,8 +112,10 @@ class PhyloKernel:
         # compute number of branches in tree
         branches = t.get_nonterminals() + t.get_terminals()
         nbranches = len(branches) - 1
-        
-        if mode == 'mean':  
+
+        if mode == 'mean':
+            if t.root.branch_length is None:
+                t.root.branch_length = 0.
             tree_length = t.total_branch_length() - t.root.branch_length
             mean_branch_length = tree_length / nbranches
             
@@ -149,7 +143,7 @@ class PhyloKernel:
             tip.production = 0
             
             if self.labelFilter != None:
-            	tip.label = self.labelRegex.findall(tip.name)[0]
+                tip.label = self.labelRegex.findall(tip.name)[0]
 
         for i, node in enumerate(t.get_nonterminals(order='postorder')):
             children = node.clades
@@ -201,10 +195,9 @@ class PhyloKernel:
 #                print("in: " + str(n1.index))
                 
                 for c in n1.clades:
-	            	if hasattr(c, 'index'):
-	    	        	while c.index not in dp_matrix:
+                    if hasattr(c, 'index'):
+                        while c.index not in dp_matrix:
 #	    	        		print(str(n1.index) + " wait on: " + str(c.index))
-	    	        	    
     		        		time.sleep(0.0001)
 
             for n2 in nodes2:
@@ -248,7 +241,7 @@ class PhyloKernel:
                     else:
                         res = self.decayFactor * math.exp( -1. / self.gaussFactor * (n1.sqbl + n2.sqbl - 2*sum([(n1.bl[i]*n2.bl[i]) for i in range(len(n1.bl))]))) 
                     
-                    	for cn1 in range(2):
+                        for cn1 in range(2):
                             c1 = n1.clades[cn1]
                             c2 = n2.clades[cn1]
                         

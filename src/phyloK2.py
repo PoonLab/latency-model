@@ -143,7 +143,8 @@ class PhyloKernel:
             tip.production = 0
             
             if self.labelFilter != None:
-                tip.label = self.labelRegex.findall(tip.name)[0]
+                matches = self.labelRegex.findall(tip.name)
+                tip.label = matches[0] if matches else ''
 
         for i, node in enumerate(t.get_nonterminals(order='postorder')):
             children = node.clades

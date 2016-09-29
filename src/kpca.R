@@ -14,12 +14,6 @@ eig(kp) / sum(eig(kp))  # 51.5% in first two components
 plot(rotated(kp), bg=rep(rainbow(5, v=0.8, alpha=0.5), each=20), cex=1.5, pch=rep(21:25, each=20), xlab='First component', ylab='Second component', cex.lab=1.2)
 title('Unlabeled tree kernel', adj=0, line=0.5)
 
-# m2 <- read.csv('~/git/latency-model/src/test.lab-kmat.csv', header=F)
-# km.2 <- as.kernelMatrix(as.matrix(m2))
-# kp.2 <- kpca(km.2)
-# plot(rotated(kp.2), col=rep(rainbow(5, v=0.8), each=20), pch=20, cex=2)
-
-
 m3 <- read.csv('~/git/latency-model/data/test/test.kmat0.csv', header=F)
 km.3 <- as.kernelMatrix(as.matrix(m3))
 kp.3 <- kpca(km.3)
@@ -53,3 +47,11 @@ r2 <- rsqr(km.3)
 boxplot(r1, r2)
 
 
+# what if we can't tell the difference between L and Ts?
+
+m2 <- read.csv('~/git/latency-model/data/test/test.kmat-RNAorDNA.csv', header=F)
+km.2 <- as.kernelMatrix(as.matrix(m2))
+kp.2 <- kpca(km.2)
+plot(rotated(kp.2), col=rep(rainbow(5, v=0.8), each=20), pch=20, cex=2)
+
+summary(rsqr(km.2))

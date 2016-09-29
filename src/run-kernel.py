@@ -18,8 +18,9 @@ comm = MPI.COMM_WORLD
 my_rank = comm.Get_rank()
 nprocs = comm.Get_size()
 
+k = PK(decayFactor=0.2, gaussFactor=2, verbose=True, labelFactor=0, labelFilter='\.V$')
 #k = PK(decayFactor=0.2, gaussFactor=2, verbose=True, labelFactor=0, labelFilter='\.(\w+)$')
-k = PK(decayFactor=0.2, gaussFactor=2, verbose=True)
+#k = PK(decayFactor=0.2, gaussFactor=2, verbose=True)
 
 files = glob('../data/test/*.nwk')
 
@@ -72,7 +73,7 @@ if my_rank == 0:
 
     # normalize kernel scores and output
     #with open('test.kmat0.csv', 'w') as outfile:
-    with open('test.kmat.csv', 'w') as outfile:
+    with open('test.kmat-RNAorDNA.csv', 'w') as outfile:
         for i in range(k.ntrees):
             row = [k.kmat[i,j] / math.sqrt(k.kmat[i,i]*k.kmat[j,j]) for j in range(k.ntrees)]
             outfile.write(','.join(map(str, row)))

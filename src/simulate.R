@@ -8,11 +8,6 @@ require(ade4)
 folder <- "../data/test/"
 
 
-
-
-cat("initializing...\n")
-
-
 ###################################
 
 ## Define the model
@@ -68,7 +63,7 @@ params["d.T"] <- 0.01    # death rate of uninfected cells (per day)
 params["k"] <- 2.4e-8    # rate of infection (mL/day)
 params["eta"] <- 0.01   # probability of entering latent state
 params["d.0"] <- 0.001   # death rate of latently-infected cells
-params["a.L"] <- 0.2     # rate of transition from latently to productively infected cells
+params["a.L"] <- 0.01    # rate of transition from latently to productively infected cells
 params["delta"] <- 1.0   # death rate of productively infected cells (per day)
 params["N"] <- 2000      # number of virions produced by cell death
 params["c"] <- 23.        # clearance rate of free virus (per day)
@@ -149,7 +144,7 @@ trees <- lapply(trees, function(tree) {
 'multiPhylo' -> class(trees)
 
 # write trees out to file
-outfile <- paste0(folder, "aL-0.2.nwk")
+outfile <- paste0(folder, "aL-", params["a.L"], ".nwk")
 write.tree(trees, file=outfile, append=FALSE)
 
 

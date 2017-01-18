@@ -1,0 +1,55 @@
+<beast version='2.0' namespace='master:master.model:master.steppers:master.conditions:master.outputs'>
+    <run spec='Trajectory'
+         simulationTime="1.0"
+         nSamples="100"
+         verbosity="1">
+         
+        <model spec='Model' id='model'>
+            <population spec='Population' id='T' populationName='T'/>
+            <population spec='Population' id='V' populationName='V'/>
+            <population spec='Population' id='L' populationName='L'/>
+            <population spec='Population' id='Ts' populationName='Ts'/>
+            
+            <reaction spec='Reaction' reactionName="CellBirth" rate="1e3">
+                0 -> T
+            </reaction>
+            <reaction spec='Reaction' reactionName="InfectLatent" rate="0.001">
+                T + V -> L
+            </reaction>
+            <reaction spec='Reaction' reactionName="InfectActive" rate="0.01">
+                T + V -> Ts
+            </reaction>
+            <reaction spec='Reaction' reactionName="Reactivate" rate="0.01">
+                L -> Ts
+            </reaction>
+            <reaction spec='Reaction' reactionName="VirionProduction" rate="100">
+                Ts -> Ts + V
+            </reaction>
+            
+            <!-- cell death / virus removal -->
+            <reactionGroup spec='ReactionGroup' reactionGroupName="Death">
+                <reaction spec='Reaction' rate="10.0">
+                    Ts -> 0
+                </reaction>
+                <reaction spec='Reaction' rate="0.01">
+                    L -> 0
+                </reaction>
+                <reaction spec='Reaction' rate="5.0">
+                    V -> 0
+                </reaction>
+            </reactionGroup>
+        </model>
+        
+        <initialState spec='InitState'>
+            <populationSize spec='PopulationSize' population='@T' size='1e6'/>
+<!--             <lineageSeed spec='Individual' population='@V'/> -->
+            <populationSize spec='PopulationSize' population='@V' size='1'/>
+        </initialState>
+        
+<!--         <leafCountEndCondition spec='LeafCountEndCondition' nLeaves="100"/> -->
+        
+<!--         <output spec='NewickOutput' fileName='RPTree_output.newick'/> -->
+<!--         <output spec='NexusOutput' fileName='RPSTree_output.nexus'/> -->
+        <output spec='JsonOutput' fileName='RPTree_output.json'/>
+    </run>
+</beast>

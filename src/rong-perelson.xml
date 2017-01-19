@@ -58,7 +58,7 @@
 
         <inheritancePostProcessor spec='LineageSampler'
                                   reverseTime="false"
-                                  noClean="true">
+                                  noClean="false">
             <populationSize spec='PopulationSize' size="10">
                 <population spec='Population' type='@V' location="0"/>
             </populationSize>

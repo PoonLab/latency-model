@@ -3,11 +3,12 @@
                                 :master.conditions
                                 :master.postprocessors
                                 :master.outputs'>
-<!--     <run spec='InheritanceTrajectory' -->
-    <run spec="Trajectory"
+
+    <run spec="InheritanceTrajectory"
+         samplePopulationSizes="true"
          nSamples="100"
          verbosity="1"
-         simulationTime="0.5">
+         simulationTime="0.1">
          
         <model spec='Model' id='model'>
 <!--         V[0] = free virus, V[1] = infected active cell, V[2] = infected latent cell -->
@@ -47,36 +48,31 @@
         
         <initialState spec='InitState'>
             <populationSize spec='PopulationSize' population='@T' size='1e6'/>
-            <!-- 
-<lineageSeed spec='Individual'>
+            <lineageSeedMultiple spec='MultipleIndividuals' copies="10" time="0.0">
                 <population spec='Population' type="@V" location="0"/>
-            </lineageSeed>
- -->
-            <populationSize spec='PopulationSize' size='1'>
-                <population spec='Population' type='@V' location="0"/>
-            </populationSize>
+            </lineageSeedMultiple>
         </initialState>
         
 <!--         <leafCountEndCondition spec='LeafCountEndCondition' nLeaves="100"/> -->
         
-<!-- 
+
         <inheritancePostProcessor spec='LineageSampler'
                                   reverseTime="false"
-                                  noClean="false">
-            <populationSize spec='PopulationSize' size="5">
+                                  noClean="true">
+            <populationSize spec='PopulationSize' size="10">
                 <population spec='Population' type='@V' location="0"/>
             </populationSize>
             <populationSize spec='PopulationSize' size="10">
                 <population spec='Population' type='@V' location="1"/>
             </populationSize>
-            <populationSize spec='PopulationSize' size="15">
+            <populationSize spec='PopulationSize' size="10">
                 <population spec='Population' type='@V' location="2"/>
             </populationSize>
         </inheritancePostProcessor>
- -->
+
         
 <!--         <output spec='NewickOutput' fileName='RPTree_output.newick'/> -->
-<!--         <output spec='NexusOutput' fileName='RPTree_output.nexus'/> -->
+        <output spec='NexusOutput' fileName='RPTree_output.nexus'/>
         <output spec='JsonOutput' fileName='RPTree_output.json'/>
     </run>
 </beast>

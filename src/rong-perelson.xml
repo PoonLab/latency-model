@@ -1,55 +1,82 @@
-<beast version='2.0' namespace='master:master.model:master.steppers:master.conditions:master.outputs'>
-    <run spec='Trajectory'
-         simulationTime="1.0"
+<beast version='2.0' namespace='master
+                                :master.model
+                                :master.conditions
+                                :master.postprocessors
+                                :master.outputs'>
+<!--     <run spec='InheritanceTrajectory' -->
+    <run spec="Trajectory"
          nSamples="100"
-         verbosity="1">
+         verbosity="1"
+         simulationTime="0.5">
          
         <model spec='Model' id='model'>
+<!--         V[0] = free virus, V[1] = infected active cell, V[2] = infected latent cell -->
+            <populationType spec="PopulationType" id='V' typeName='V' dim="3"/>
             <population spec='Population' id='T' populationName='T'/>
-            <population spec='Population' id='V' populationName='V'/>
-            <population spec='Population' id='L' populationName='L'/>
-            <population spec='Population' id='Ts' populationName='Ts'/>
+
             
             <reaction spec='Reaction' reactionName="CellBirth" rate="1e3">
                 0 -> T
             </reaction>
             <reaction spec='Reaction' reactionName="InfectLatent" rate="0.001">
-                T + V -> L
+                T + V[0] -> V[2]
             </reaction>
             <reaction spec='Reaction' reactionName="InfectActive" rate="0.01">
-                T + V -> Ts
+                T + V[0] -> V[1]
             </reaction>
             <reaction spec='Reaction' reactionName="Reactivate" rate="0.01">
-                L -> Ts
+                V[2] -> V[1]
             </reaction>
-            <reaction spec='Reaction' reactionName="VirionProduction" rate="100">
-                Ts -> Ts + V
+            <reaction spec='Reaction' reactionName="VirionProduction" rate="50">
+                V[1] -> V[1] + V[0]
             </reaction>
             
             <!-- cell death / virus removal -->
             <reactionGroup spec='ReactionGroup' reactionGroupName="Death">
                 <reaction spec='Reaction' rate="10.0">
-                    Ts -> 0
+                    V[1] -> 0
                 </reaction>
                 <reaction spec='Reaction' rate="0.01">
-                    L -> 0
+                    V[2] -> 0
                 </reaction>
-                <reaction spec='Reaction' rate="5.0">
-                    V -> 0
+                <reaction spec='Reaction' rate="0.1">
+                    V[0] -> 0
                 </reaction>
             </reactionGroup>
         </model>
         
         <initialState spec='InitState'>
             <populationSize spec='PopulationSize' population='@T' size='1e6'/>
-<!--             <lineageSeed spec='Individual' population='@V'/> -->
-            <populationSize spec='PopulationSize' population='@V' size='1'/>
+            <!-- 
+<lineageSeed spec='Individual'>
+                <population spec='Population' type="@V" location="0"/>
+            </lineageSeed>
+ -->
+            <populationSize spec='PopulationSize' size='1'>
+                <population spec='Population' type='@V' location="0"/>
+            </populationSize>
         </initialState>
         
 <!--         <leafCountEndCondition spec='LeafCountEndCondition' nLeaves="100"/> -->
         
+<!-- 
+        <inheritancePostProcessor spec='LineageSampler'
+                                  reverseTime="false"
+                                  noClean="false">
+            <populationSize spec='PopulationSize' size="5">
+                <population spec='Population' type='@V' location="0"/>
+            </populationSize>
+            <populationSize spec='PopulationSize' size="10">
+                <population spec='Population' type='@V' location="1"/>
+            </populationSize>
+            <populationSize spec='PopulationSize' size="15">
+                <population spec='Population' type='@V' location="2"/>
+            </populationSize>
+        </inheritancePostProcessor>
+ -->
+        
 <!--         <output spec='NewickOutput' fileName='RPTree_output.newick'/> -->
-<!--         <output spec='NexusOutput' fileName='RPSTree_output.nexus'/> -->
+<!--         <output spec='NexusOutput' fileName='RPTree_output.nexus'/> -->
         <output spec='JsonOutput' fileName='RPTree_output.json'/>
     </run>
 </beast>

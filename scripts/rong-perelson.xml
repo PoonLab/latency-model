@@ -8,7 +8,7 @@
          samplePopulationSizes="true"
          nSamples="100"
          verbosity="1"
-         simulationTime="0.1">
+         simulationTime="0.2">
          
         <model spec='Model' id='model'>
 <!--         V[0] = free virus, V[1] = infected active cell, V[2] = infected latent cell -->
@@ -28,29 +28,32 @@
             <reaction spec='Reaction' reactionName="Reactivate" rate="0.01">
                 V[2] -> V[1]
             </reaction>
-            <reaction spec='Reaction' reactionName="VirionProduction" rate="50">
+            <reaction spec='Reaction' reactionName="VirionProduction" rate="100">
                 V[1] -> V[1] + V[0]
             </reaction>
             
             <!-- cell death / virus removal -->
             <reactionGroup spec='ReactionGroup' reactionGroupName="Death">
-                <reaction spec='Reaction' rate="10.0">
+                <reaction spec='Reaction' rate="1.0">
+                    V[0] -> 0
+                </reaction>
+                <reaction spec='Reaction' rate="0.1">
                     V[1] -> 0
                 </reaction>
                 <reaction spec='Reaction' rate="0.01">
                     V[2] -> 0
-                </reaction>
-                <reaction spec='Reaction' rate="0.1">
-                    V[0] -> 0
                 </reaction>
             </reactionGroup>
         </model>
         
         <initialState spec='InitState'>
             <populationSize spec='PopulationSize' population='@T' size='1e6'/>
-            <lineageSeedMultiple spec='MultipleIndividuals' copies="10" time="0.0">
-                <population spec='Population' type="@V" location="0"/>
-            </lineageSeedMultiple>
+            <!--<lineageSeedMultiple spec='MultipleIndividuals' copies="10" time="0.0">-->
+                <!--<population spec='Population' type="@V" location="0"/>-->
+            <!--</lineageSeedMultiple>-->
+            <lineageSeed spec="Individual">
+                <population spec="Population" type="@V" location="0"/>
+            </lineageSeed>
         </initialState>
         
 <!--         <leafCountEndCondition spec='LeafCountEndCondition' nLeaves="100"/> -->
@@ -72,7 +75,7 @@
 
         
 <!--         <output spec='NewickOutput' fileName='RPTree_output.newick'/> -->
-        <output spec='NexusOutput' fileName='RPTree_output.nexus'/>
-        <output spec='JsonOutput' fileName='RPTree_output.json'/>
+        <output spec='NexusOutput' fileName='../data/RPTree_output.nexus'/>
+        <output spec='JsonOutput' fileName='../data/RPTree_output.json'/>
     </run>
 </beast>

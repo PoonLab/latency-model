@@ -6,14 +6,13 @@ from seqUtils import convert_fasta
 from csv import DictReader
 from glob import glob
 
-def process(fasta_file):
+def process(fasta_file, csvdict):
     handle = open(fasta_file, 'rU')
     fasta = dict(convert_fasta(handle))
     handle.close()
 
     handle = open(fasta_file.replace('.fa', '.gb.csv'), 'rU')
     rows = DictReader(handle)
-    csvdict = {}
     for row in rows:
         # header,accno,patid,coldate,tissue,moltype,isolate,isosource
         h = row['header']
@@ -37,7 +36,6 @@ def process(fasta_file):
             'source': row['isosource'],
             'seq': fasta[h]
         }})
-    return csvdict
 
 
 def write_output(stem, d):
@@ -62,13 +60,12 @@ def write_output(stem, d):
 
 
 def main():
-    files = filter(lambda x: not x.endswith('.annot.fa'), glob('../data/25712966/env-*.fa'))
-    print files
+    files = filter(lambda x: not x.endswith('.annot.fa'),
+                   glob('../data/25712966/pol-*.fa'))
     csvdict = {}
     for file in files:
-        csvdict.update(process(file))
-    print len(csvdict['5'])
-    write_output('../data/25712966/env.annot', csvdict)
+        process(file, csvdict)
+    write_output('../data/25712966/pol.annot', csvdict)
 
 if __name__ == '__main__':
     main()

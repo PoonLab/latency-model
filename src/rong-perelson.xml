@@ -1,0 +1,78 @@
+<beast version='2.0' namespace='master
+                                :master.model
+                                :master.conditions
+                                :master.postprocessors
+                                :master.outputs'>
+
+    <run spec="InheritanceTrajectory"
+         samplePopulationSizes="true"
+         nSamples="100"
+         verbosity="1"
+         simulationTime="0.1">
+         
+        <model spec='Model' id='model'>
+<!--         V[0] = free virus, V[1] = infected active cell, V[2] = infected latent cell -->
+            <populationType spec="PopulationType" id='V' typeName='V' dim="3"/>
+            <population spec='Population' id='T' populationName='T'/>
+
+            
+            <reaction spec='Reaction' reactionName="CellBirth" rate="1e3">
+                0 -> T
+            </reaction>
+            <reaction spec='Reaction' reactionName="InfectLatent" rate="0.001">
+                T + V[0] -> V[2]
+            </reaction>
+            <reaction spec='Reaction' reactionName="InfectActive" rate="0.01">
+                T + V[0] -> V[1]
+            </reaction>
+            <reaction spec='Reaction' reactionName="Reactivate" rate="0.01">
+                V[2] -> V[1]
+            </reaction>
+            <reaction spec='Reaction' reactionName="VirionProduction" rate="50">
+                V[1] -> V[1] + V[0]
+            </reaction>
+            
+            <!-- cell death / virus removal -->
+            <reactionGroup spec='ReactionGroup' reactionGroupName="Death">
+                <reaction spec='Reaction' rate="10.0">
+                    V[1] -> 0
+                </reaction>
+                <reaction spec='Reaction' rate="0.01">
+                    V[2] -> 0
+                </reaction>
+                <reaction spec='Reaction' rate="0.1">
+                    V[0] -> 0
+                </reaction>
+            </reactionGroup>
+        </model>
+        
+        <initialState spec='InitState'>
+            <populationSize spec='PopulationSize' population='@T' size='1e6'/>
+            <lineageSeedMultiple spec='MultipleIndividuals' copies="10" time="0.0">
+                <population spec='Population' type="@V" location="0"/>
+            </lineageSeedMultiple>
+        </initialState>
+        
+<!--         <leafCountEndCondition spec='LeafCountEndCondition' nLeaves="100"/> -->
+        
+
+        <inheritancePostProcessor spec='LineageSampler'
+                                  reverseTime="false"
+                                  noClean="false">
+            <populationSize spec='PopulationSize' size="10">
+                <population spec='Population' type='@V' location="0"/>
+            </populationSize>
+            <populationSize spec='PopulationSize' size="10">
+                <population spec='Population' type='@V' location="1"/>
+            </populationSize>
+            <populationSize spec='PopulationSize' size="10">
+                <population spec='Population' type='@V' location="2"/>
+            </populationSize>
+        </inheritancePostProcessor>
+
+        
+<!--         <output spec='NewickOutput' fileName='RPTree_output.newick'/> -->
+        <output spec='NexusOutput' fileName='RPTree_output.nexus'/>
+        <output spec='JsonOutput' fileName='RPTree_output.json'/>
+    </run>
+</beast>

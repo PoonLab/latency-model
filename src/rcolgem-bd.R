@@ -212,7 +212,7 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
                 isExtant[sat_h1] <- TRUE
                 heights[sat_h1] <- h1
             }
-            else {
+            else {            	
                 .F <- fgy$.F
                 .G <- fgy$.G
                 .Y <- fgy$.Y
@@ -249,6 +249,7 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
                 isExtant[u] <- FALSE
                 isExtant[v] <- FALSE
                 lstates[alpha, ] = mstates[alpha, ] <- palpha
+
                 heights[alpha] <- h1
                 uv <- c(u, v)
                 inEdgeMap[uv] <- alpha
@@ -281,7 +282,9 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
             bdt <- binaryDatedTree(phylo, sampleTimes2, sampleStates = sampleStates2)
             F
         }, error = function(e) T)) return(NA)
-        return(bdt)
+        
+        result <- list(bdt=bdt, lstates=lstates, ustates=ustates, mstates=mstates)
+        return(result)
     }
     if (any(is.null(cluster))) {
         result <- lapply(1:n.reps, run1)

@@ -1,14 +1,17 @@
 #library(rcolgem)
 setwd('~/git/latency-model/src')
 source('rcolgem-bd.R')
+
+# load the model
 source('rong-perelson.R')
 
+# modify model parameter
+params["eta"] <- 0.01    # probability of entering latent state
 
 require(ade4)
 
 # output destination folder
-folder <- "../data/test/"
-
+folder <- "../data/cahr/"
 
 
 
@@ -32,9 +35,9 @@ tfgy <- make.fgy(start.time, end.time, births, deaths, nonDemeDynamics, x0, migr
 # plot(tfgy[[5]])
 
 
-ntimes <- 2  # number of time points we sample HIV RNA and DNA
-nsamples.V <- 100  # number of HIV RNA (free virus) samples PER TIME POINT
-nsamples.T <- 100  # number of cellular HIV DNA samples PER TIME POINT
+ntimes <- 1  # number of time points we sample HIV RNA and DNA
+nsamples.V <- 50  # number of HIV RNA (free virus) samples PER TIME POINT
+nsamples.T <- 50  # number of cellular HIV DNA samples PER TIME POINT
 nsamples <- nsamples.V + nsamples.T
 
 # time series of number of infected cells
@@ -68,6 +71,7 @@ for (i in 1:length(time.points)) {
 
 #cat(" building tree...")
 n.reps <- 1  # number of trees to simulate
+set.seed(42)
 
 trees <- simulate.binary.dated.tree.fgy.wrapper(tfgy[[1]], tfgy[[2]], tfgy[[3]], tfgy[[4]], sampleTimes, sampleStates, n.reps=n.reps, method='rk4')
 
@@ -78,8 +82,39 @@ trees <- lapply(trees, function(tree) {
 })
 'multiPhylo' -> class(trees)
 
+# each tree is returned with lstates, ustates, and mstates matrices as attributes
+# the dimensions of each matrix is nrow = (Ntip+Nnodes) and ncol = length(demes)
+
+# for class "phylo" number begins with tips (1:n) and then proceeds with nodes (n+1..)
+
+tree <- trees[[1]]
+
+nrow(tree$edge) == Ntip(tree) + Nnode(tree) - 1
+
+# In my particular example, tree$edge = 199, 100
+tree$edge[198,]
+
+# First column gives ancestor, so 100 is the last tip (93.Ts).
+tree$tip.label[100]
+
+# This implies that 101 is the root.
+tree$node.label <- (1:Nnode(tree)) + Ntip(tree)
+
+
+# Hopefully the *states matrices use the same numbering scheme...
+# I have annotated the phylo object with these matrices as attributes
+# CAVEAT: the matrices are also returned as list members but these don't seem to be correct
+all(sampleStates == tree$lstates[1:Ntip(tree),])
+all(sampleStates == attr(tree, "lstates")[1:Ntip(tree),])
+
+# however, all the internal nodes are assigned to deme Ts
+# is this a problem with the model or the reconstruction?
+
+
+# use internal node labels (demes) to adjust branch lengths
+
 # write trees out to file
-outfile <- paste0(folder, "aL-", params["a.L"], ".nwk")
+outfile <- paste0(folder, "eta-", params["eta"], ".nwk")
 write.tree(trees, file=outfile, append=FALSE)
 
 

@@ -157,12 +157,17 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
         outEdgeMap <- matrix(-1, (Nnode + n), 2)
         parent <- 1:(Nnode + n)
         daughters <- matrix(-1, (Nnode + n), 2)
+        
         lstates <- matrix(-1, (Nnode + n), m)
         mstates <- matrix(-1, (Nnode + n), m)
         ustates <- matrix(-1, (Nnode + n), m)
+        
         ssm <- matrix(0, nrow = n, ncol = m)
+        
+        # assign sampled states (demes) to tips
         lstates[1:n, ] <- sortedSampleStates
         mstates[1:n, ] <- lstates[1:n, ]
+        
         isExtant <- rep(FALSE, Nnode + n)
         isExtant[sampled.at.h(h0)] <- TRUE
         extantLines <- which(isExtant)
@@ -174,6 +179,7 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
         else {
             A0 <- sortedSampleStates[extantLines, ]
         }
+        
         lineageCounter <- n + 1
         for (ih in 1:(length(eventTimes) - 1)) {
             h0 <- eventTimes[ih]
@@ -185,6 +191,7 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
             Q <- out[[1]]
             A <- out[[2]]
             L <- out[[3]]
+            
             if (is.nan(L)) {
                 L <- Inf
             }
@@ -240,14 +247,15 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
                 ustates[v, ] <- mstates[v, ]
                 a_u <- pmin(1, mstates[u, ]/.Y)
                 a_v <- pmin(1, mstates[v, ]/.Y)
-                lambda_uv <- ((a_u) %*% t(a_v)) * .F + ((a_v) %*% 
-                  t(a_u)) * .F
+                
+                lambda_uv <- ((a_u) %*% t(a_v)) * .F + ((a_v) %*% t(a_u)) * .F
                 palpha <- rowSums(lambda_uv)/sum(lambda_uv)
                 alpha <- lineageCounter
                 lineageCounter <- lineageCounter + 1
                 isExtant[alpha] <- TRUE
                 isExtant[u] <- FALSE
                 isExtant[v] <- FALSE
+                
                 lstates[alpha, ] = mstates[alpha, ] <- palpha
 
                 heights[alpha] <- h1
@@ -263,6 +271,7 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
                 edge.length[v] <- h1 - heights[v]
             }
         }
+        
         if (tryCatch({
             self <- list(edge = edge, edge.length = edge.length, 
                 Nnode = Nnode, tip.label = tip.label, heights = heights, 
@@ -280,11 +289,16 @@ simulate.binary.dated.tree.fgy <- function (times, births, migrations, demeSizes
             sampleStates2 <- as.matrix(sampleStates2[phylo$tip.label, 
                 ], nrow = length(phylo$tip.label))
             bdt <- binaryDatedTree(phylo, sampleTimes2, sampleStates = sampleStates2)
-            F
+            
+            # return state matrices as attributes
+        	attr(bdt, "lstates") <- lstates
+        	attr(bdt, "ustates") <- ustates
+        	attr(bdt, "mstates") <- mstates
+        	
+            F  # no problem
         }, error = function(e) T)) return(NA)
         
-        result <- list(bdt=bdt, lstates=lstates, ustates=ustates, mstates=mstates)
-        return(result)
+        return(bdt)
     }
     if (any(is.null(cluster))) {
         result <- lapply(1:n.reps, run1)

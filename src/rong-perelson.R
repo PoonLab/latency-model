@@ -10,26 +10,23 @@
 demes <- c("V", "L", "Ts")
 
 # TODO: clonal expansion of T cells
-births <- t(rbind(
+births <- rbind(
 	# productively infected cells burst at rate (delta) and produce (N) virions
-	c('0', '0', 'parms$N * parms$delta * Ts'), 
+	c('0', '0', '0'),
 	c('0', '0', '0'), 
-	c('0', '0', '0'))
+	c('parms$N*parms$delta*Ts', '0', '0')  # Ts->V
 )
 rownames(births) <- colnames(births) <- demes
 
 
-migrations <- t(rbind(
-	c('0', '0', '0'), 
-	
-	# (k) is infection rate of susceptible cells (V->L)
-	# goes latent with probability (eta)
-	c('parms$eta * parms$k * T * V', '0', '0'), 
-	
-	# otherwise productively-infected cell (V->Ts)
-	# latently-infected cells reactivate at rate (a.L)
-	c('(1 - parms$eta) * parms$k * T * V', 'parms$a.L * L', '0')
-))
+# (k) is infection rate of susceptible cells
+# (eta) is probability of latent infection (V->L)
+# (a.L) reactivation rate of latently-infected cells (L->Ts)
+migrations <- rbind(
+	c('0', 'parms$eta*parms$k*T*V', '(1-parms$eta)*parms$k*T*V'), 
+	c('0', '0', 'parms$a.L * L'), 
+	c('0', '0', '0')
+)
 rownames(migrations) <- colnames(migrations) <- demes
 
 
@@ -54,7 +51,7 @@ params["d.T"] <- 0.01    # death rate of uninfected cells (per day)
 params["k"] <- 2.4e-8    # rate of infection (mL/day)
 params["eta"] <- 0.01    # probability of entering latent state
 params["d.0"] <- 0.001   # death rate of latently-infected cells
-params["a.L"] <- 0.01    # rate of transition from latently to productively infected cells
+params["a.L"] <- 0.05    # rate of transition from latently to productively infected cells
 params["delta"] <- 1.0   # death rate of productively infected cells (per day)
 params["N"] <- 2000      # number of virions produced by cell death
 params["c"] <- 23.       # clearance rate of free virus (per day)
